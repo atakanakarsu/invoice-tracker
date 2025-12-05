@@ -1,0 +1,146 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  role          String    @default("OPERASYON") // ADMIN, MUHASEBE, OPERASYON
+  departmentId  String?
+  projectId     String?
+  
+  department    Department? @relation(fields: [departmentId], references: [id])
+  project       Project?    @relation(fields: [projectId], references: [id])
+  
+  accounts      Account[]
+  sessions      Session[]
+  
+  assignedInvoices Invoice[] @relation("AssignedTo")
+  workflowLogs     WorkflowLog[]
+  notifications    Notification[]
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Department {
+  id       String    @id @default(cuid())
+  name     String    @unique
+  projects Project[]
+  users    User[]
+}
+
+model Project {
+  id           String     @id @default(cuid())
+  name         String
+  departmentId String
+  department   Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  users        User[]
+  invoices     Invoice[]
+}
+
+model Invoice {
+  id                 String   @id @default(cuid())
+  invoiceNo          String?  // Fatura No
+  amount             Float    // Ödenecek Tutar
+  amountExcludingTax Float?   // Vergiler Hariç Toplam Tutar
+  tax                Float?   // Toplam KDV
+  currency           String   // TRY, USD, EUR, etc.
+  supplier           String   // Gönderici
+  invoiceDate        DateTime @default(now()) // Fatura Tarihi
+  date               DateTime @default(now()) // Keeping for backward compatibility or alias to invoiceDate
+  scenario           String?  // Senaryo Tipi (e.g., TEMEL, TICARI)
+  invoiceType        String?  // Fatura Tipi (e.g., SATIS, IADE)
+  status             String   @default("PENDING") // PENDING, ASSIGNED, PROCESSED, ARCHIVED, RETURNED
+  description        String?
+  fileUrl            String?
+  
+  assignedToId       String?
+  assignedTo         User?    @relation("AssignedTo", fields: [assignedToId], references: [id])
+  
+  projectId          String?
+  project            Project? @relation(fields: [projectId], references: [id])
+  
+  logs               WorkflowLog[]
+  attachments        Attachment[]
+  
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+model Attachment {
+  id        String   @id @default(cuid())
+  name      String   // Original filename
+  url       String   // Path to file
+  type      String   // MIME type
+  invoiceId String
+  invoice   Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+}
+
+model WorkflowLog {
+  id        String   @id @default(cuid())
+  invoiceId String
+  invoice   Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  action    String   // ASSIGN, PROCESS, RETURN, ARCHIVE
+  actorId   String
+  actor     User     @relation(fields: [actorId], references: [id])
+  note      String?
+  timestamp DateTime @default(now())
+}
+
+model RejectReason {
+  id          String @id @default(cuid())
+  description String @unique
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String   // INFO, SUCCESS, WARNING, ERROR
+  message   String
+  resourceId String? // e.g., Invoice ID
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
