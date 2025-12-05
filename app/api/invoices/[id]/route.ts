@@ -65,11 +65,12 @@ export async function PUT(req: Request, props: { params: Promise<{ id: string }>
     }
 
     // For Process/Return, we can also add details if needed.
+    let customLogNote = ""
     if (action === "PROCESS") {
-        var customLogNote = `Processed by Operation. Note: ${description || ""}`
+        customLogNote = `Processed by Operation. Note: ${description || ""}`
     }
     if (action === "RETURN") {
-        var customLogNote = `Returned to Accounting. Reason: ${description || ""}`
+        customLogNote = `Returned to Accounting. Reason: ${description || ""}`
     }
 
     const invoice = await prisma.invoice.update({
