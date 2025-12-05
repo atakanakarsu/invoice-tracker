@@ -54,18 +54,17 @@ export async function PUT(req: Request, props: { params: Promise<{ id: string }>
 
             // Prepare rich note for Log
             if (action === "ASSIGN") {
-                const assignNote = `Assigned to Project: ${project.name} by ${session.user.name}. Note: ${description || "No note"}`
-                // Override the specific log creation below or just set a variable.
-                // let's use a variable for the note.
                 logAction = "ASSIGN"
-                // function scope variable for Note
-                var customLogNote = assignNote
             }
         }
     }
 
-    // For Process/Return, we can also add details if needed.
+    // Build custom log note based on action
     let customLogNote = ""
+    if (action === "ASSIGN" && projectId) {
+        const project = await prisma.project.findUnique({ where: { id: projectId } })
+        customLogNote = `Assigned to Project: ${project?.name || "Unknown"} by ${session.user.name}. Note: ${description || "No note"}`
+    }
     if (action === "PROCESS") {
         customLogNote = `Processed by Operation. Note: ${description || ""}`
     }
