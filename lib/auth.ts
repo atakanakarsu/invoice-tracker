@@ -25,11 +25,8 @@ export const authOptions: NextAuthOptions = {
     ],
     callbacks: {
         async signIn({ user }) {
-            const allowedDomain = "trukker.com"
-            if (user.email?.endsWith(`@${allowedDomain}`)) {
-                return true
-            }
-            return !!user.email?.endsWith("@trukker.com");
+            // Allow any Google account (remove domain restriction for testing)
+            return true
         },
         async session({ session, token }) {
             if (session.user && token) {
